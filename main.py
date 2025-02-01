@@ -8,6 +8,11 @@ inputs = tokenizer("Hi everyone, I'm Diab, and I'm studying Generative AI", retu
 print(inputs["input_ids"])
 
 # Step 2. Examine the tokenization¶
-token_tuples = [(id, tokenizer.decode(id))for id in inputs["input_ids"][0]]
-table = pandas.DataFrame(token_tuples, columns=("id", "token"))
+
+def show_tokenization(input):
+   token_tuples = [(id, tokenizer.decode(id))for id in inputs["input_ids"][0]]
+   table = pandas.DataFrame(token_tuples, columns=("id", "token"))
+   return table
+
+table = show_tokenization(inputs)
 print(table)
