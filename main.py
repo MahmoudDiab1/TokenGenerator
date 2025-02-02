@@ -1,40 +1,30 @@
-import pandas
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
+import pandas as pd
 
-# Step 1. Load a tokenizer and a model
+text = "Hello everyone! my name is Diab and I'm learning generative"
+print(f" Input text: {text}")
+
 tokenizer = AutoTokenizer.from_pretrained("gpt2")
-
 model = AutoModelForCausalLM.from_pretrained("gpt2")
-inputs = tokenizer("Hi everyone, I'm Diab, and I'm studying Generative AI", return_tensors = "pt")
-print(inputs["input_ids"])
+inputs = tokenizer(text, return_tensors = "pt")
 
-# Step 2. Examine the tokenization¶
-def show_tokenization(input):
-   token_tuples = [(id, tokenizer.decode(id))for id in inputs["input_ids"][0]]
-   table = pandas.DataFrame(token_tuples, columns=("id", "token"))
-   return table
+def show_next_n_tokens(probs, top_n):
+    dataFrame = pd.DataFrame(
+        [(id, tokenizer.decode([id]), p.item()) for id, p in enumerate(probs) if p.item() > 0],
+        columns=("id", "token", "probability")
+    ).sort_values("probability", ascending=False)[:top_n]
+    return dataFrame
 
-table = show_tokenization(inputs)
-print(table)
-
-
-# Step 3. Calculate the probability of the next token
 with torch.no_grad():
-    logites = model(**inputs).logits[:,-1,:]
-    props = torch.nn.functional.softmax(logites[0], dim=-1)
+    logits = model(**inputs).logits[:,-1,:]
+    probabilities = torch.nn.functional.softmax(logits[0], dim=-1)
 
-
-def show_next_token_choices(probabilities, top_n=5):
-    return pandas.DataFrame(
-        [
-            (id, tokenizer.decode(id), p.item())
-            for id, p in enumerate(probabilities)
-            if p.item()
-        ],
-        columns=["id", "token", "p"],
-    ).sort_values("p", ascending=False)[:top_n]
-
-
-next_words = show_next_token_choices(props)
-print(next_words)
+next_n_tokens_table = show_next_n_tokens(probabilities, 5)
+next_token_id = torch.argmax(probabilities).item() # token with max score
+next_token_value = tokenizer.decode(next_token_id)
+generated_result = text+next_token_value
+print(f" Generated result: {generated_result}")
+output_by_generated_func = model.generate(**inputs, max_length = 30, pad_token_id = tokenizer.eos_token_id)
+generated_result = tokenizer.decode(output_by_generated_func[0])
+print(f" Generated result(generated func): {generated_result}")
